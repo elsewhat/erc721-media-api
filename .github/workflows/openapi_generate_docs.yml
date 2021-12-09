@@ -28,7 +28,7 @@ jobs:
       
       - name: redoc-cli
         run: |
-          redoc-cli bundle openapi-contract/api-contract.yaml -o index.html -t openapi-contract/redoc-template/redoc-template.hbs --options.requiredPropsFirst=true --options.jsonSampleExpandLevel=5 --options.theme.spacing.sectionVertical=10 --options.theme.typography.fontFamily=Equinor,Roboto,sans-serif --options.theme.colors.primary.main=#007079
+          redoc-cli bundle openapi-contract/api-contract.yaml -o index.html -t openapi-contract/redoc-template/redoc-template.hbs --options.requiredPropsFirst=true --options.jsonSampleExpandLevel=5 --options.theme.spacing.sectionVertical=10 --options.theme.typography.fontFamily=Roboto,sans-serif --options.theme.colors.primary.main=#007079
       - name: Upload redoc index.html file
         uses: actions/upload-artifact@v2
         with:
