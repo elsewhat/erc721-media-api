@@ -2,6 +2,7 @@ openapi: 3.0.1
 info:
   title: 'ERC721 Media API'
   description: |
+    #Introduction
     The ERC721 Media API provides a standardized approach for allowing third party access to  media files for ERC721 NFTs if the owner gives permission. 
     
     Media files may for example be rigged:  
@@ -10,13 +11,32 @@ info:
     
     The media files in question are *not* stored on the blockchain, but are securely stored as part of the website for the ERC721 collection owner.
     
-    ### Requesting owner permission
-    To grant access to the media files, the NFT owner must sign a message using web3 on the website for the ERC721 collection owner. This will trigger a redirect to a callback URI defined by third party application. 
+    # Requesting owner permission
+    To grant access to the media files, the NFT owner must sign a message using web3 on the website for the ERC721 contract owner. This will trigger a redirect to a callback URI defined by third party application. 
     
     The overall authentication flow is inspired by the [OAuth Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1).
     
-    Endpoint [`/authorize-uri`](#operation/GetAuthorizeURI)
+    The first step is the endpoint [`/authorize`](#operation/GetAuthorizeURI) which initialize the flow from a third party application. The third party application must provide a `callbackURI` and is recommended to provide a `state` parameter for preventing cross-site request forgery attacks.
     
+    The results of the first step is a `HTTP 302 redirect` to a URI owned by the ERC721 contract owner. This redirect includes the `callbackURI` and `state` from the third party application. 
+    
+    By following the redirect, the NFT owner will need to sign a message using web3 to prove ownership. 
+    If the authentication through web3 signature was completed successfully, the callback URL will be triggered with three parameters:  
+    ```
+    account: The account address that apporved access.
+    accessToken: The token that grants access to the owner files.
+    state (optional): Optional state parameter which should be compared with  in order to protect against cross-site request forgery
+    ```
+    
+    If authentication was not successful, for example the user cancelled the request,  the callback URL will be triggered with a single parameter:  
+    ```
+    errorMessage: The message describing the error that occured, or that the user declined access.
+    ```
+    
+    # Get available media files
+    [`/accounts/{account-address}`](#operation/LookupERC721MediaByAccount)
+    
+    # Download media file
     
     
   version: "0.1.0"
