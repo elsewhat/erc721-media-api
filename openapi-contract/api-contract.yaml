@@ -14,7 +14,7 @@ info:
     url: http://www.apache.org/licenses/
 
   x-logo:
-    url: 'https://elsewhat.github.io/api-first-workbench/img/logo.png'
+    url: 'https://elsewhat.github.io/nft-erc721-media-api/img/logo.png'
     altText: Logo
   
 externalDocs:
@@ -23,7 +23,11 @@ externalDocs:
   
 servers:
   - url: https://meebits.larvalabs.com/api/v1/
-    description: Production environment
+    description: |
+      NFT collection #1 (contract 0x12345)
+  - url: https://api.bayc.com/api/v1/
+    description: |
+      NFT collection #2 (contract 0x56789)  
 
 security:
   - bearerAuth: [ ]
@@ -60,14 +64,8 @@ paths:
           content: 
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountMedia'
+                $ref: '#/components/schemas/ContractTokens'
           description: Request successful
-        '400':
-          description: Bad request
-          content: 
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
         '404':
           description: Account does not exist or does not own any ERC721 NFTs for this collection
           content: 
@@ -117,11 +115,114 @@ components:
               nullable: true
               readOnly: true
           additionalProperties: false
-
           
-    AccountMedia:
+    Pagination:
       type: object
-      properties:  
-        address:
+      properties:
+        total_count:
+          type: integer
+          example: 20
+          description: Total number of responses
+        incomplete_results:
+          type: boolean
+          example: false
+          description: Are there additional data in other pages
+          
+    ContractTokens:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'    
+      type: object
+      properties:
+        tokens:
+            type: array
+            items:
+              $ref: '#/components/schemas/ContractToken'
+              
+    ContractToken:
+        type: object
+        properties:
+          contract:
+            type: string
+            example: '0x7Bd29408f11D2bFC23c34f18275bBf23bB716Bc7'
+            description: Contract address
+          tokenId:
+            type: string
+            example: '13396'
+            description: Token id in the contract
+          owner: 
+            $ref: '#/components/schemas/ContractToken'
+          erc721:
+            $ref: '#/components/schemas/ERC721'
+          media:
+            type: array
+            items:
+              $ref: '#/components/schemas/Media'          
+          
+    
+    TokenOwner: 
+        type: object
+        properties:
+          address:    
+            type: string
+            example: '0x1234...'
+            description: Wallet address of owner
+            
+    ERC721: 
+        type: object
+        description: ERC721 Metadata JSON Schema 
+        properties:
+          name:    
+            type: string
+            example: 'Meebit #13396'
+            description: Name of ERC721 token
+          description:
+            type: string
+            example: 'Meebit #13396'
+          image:
+            type: string
+            example: 'https://meebits.larvalabs.com/meebitimages/characterimage?index\u003d13386\u0026type\u003dfull\u0026imageType\u003djpg'          
+          attributes:
+            type: array
+            items:
+              $ref: '#/components/schemas/ERC721Attribute'
+              
+    ERC721Attribute:
+      type: object
+      description: ERC721 attributes
+      properties:
+        trait_type:
           type: string
-          example: "TODO"
+          example: Shirt
+        value:
+          type: string
+          example: Hoodie up  
+          
+    Media:
+      type: object
+      description: Media available for the owner of the ERC721
+      properties:
+        mediaType: 
+          type: string
+          description: | 
+            Media type as defined by https://www.iana.org/assignments/media-types/media-types.xhtml
+            Official media type may not exist for all files types (for example FBX and VRM)
+          example: 'model/gltf-binary'
+          nullable: true
+        mediaFileEnding:
+          type: string
+          description: File ending for the media which can be used if mediaType is not defined
+          example: 'gltf'
+        uri:
+          type: string
+          description: | 
+            Download link for the media
+        uriAuthenticationMethod:
+          type: string
+          description: |
+            Type of authentication for proving ownership of ERC721
+          enum: ['AccessTokenQueryParameter', 'AuthorizationBearerHTTPHeader']
+        uriExpires:
+          type: string
+          format: date-time
+          description: | 
+            Defines if the uri expires at a certain time (for example to require reauthentication)
