@@ -1,4 +1,4 @@
-# Media API for ERC-721 based NFTs
+# ERC721 Media API
 
 The ERC721 Media API provides a standardized approach for allowing third party access to media files for ERC721 NFTs if the owner gives permission. 
 
