@@ -1,8 +1,24 @@
 openapi: 3.0.1
 info:
-  title: 'NFT ERC721 Media API'
+  title: 'ERC721 Media API'
   description: |
-    TODO
+    The ERC721 Media API provides a standardized approach for allowing third party access to  media files for ERC721 NFTs if the owner gives permission. 
+    
+    Media files may for example be rigged:  
+    1. 3D models in VRM, FBX and GLB formats to be used in open worlds such as Cryptovoxels, Sandbox, Decentraland or Somnium
+    1. 2D sprite sheets to use in 2D based worlds such as worldwideweb3
+    
+    The media files in question are *not* stored on the blockchain, but are securely stored as part of the website for the ERC721 collection owner.
+    
+    ### Requesting owner permission
+    To grant access to the media files, the NFT owner must sign a message using web3 on the website for the ERC721 collection owner. This will trigger a redirect to a callback URI defined by third party application. 
+    
+    The overall authentication flow is inspired by the [OAuth Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1).
+    
+    Endpoint [`/authorize-uri`](#operation/GetAuthorizeURI)
+    
+    
+    
   version: "0.1.0"
 
   contact:
@@ -35,13 +51,58 @@ security:
 
 tags:
   - name: Accounts
+  - name: Authorize
 
 x-tagGroups:
+  - name: Authorize
+    tags:
+      - Authorize  
   - name: Accounts
     tags:
       - Accounts  
 
 paths:
+  /authorize:
+    get:
+      operationId: GetAuthorizeURI
+      summary: Redirect to authorize URI
+      description: |
+        ### Overview
+        Initiate the authorization flow where the NFT owner must sign a message using web3 on the website for the ERC721 collection owner. 
+        
+        A successful signature verification will result in a `HTTP 302 redirect` to the provided `callbackURI` which should be part of third party application requiring access to the media file.
+        
+        ### Important information
+        Note: The response of this API call is normally a `HTTP 302 redirect` where the `Location` HTTP header contains the URI the NFT owner must visit in order to prove ownership.
+      tags:
+        - Authorize
+      parameters:
+        - in: query
+          name: callbackURI
+          description: | 
+            URI to redirect back to after owner has successfully proved ownership through web3 signature
+          required: true
+          schema:
+            type: string
+            example: 'https%3A%2F%2Fmeebits.larvalabs.com%2Fmeebits%2FtestCallback'
+        - in: query
+          name: state
+          description: |
+            An opaque value used by the client to maintain state between the request and callback.  The authorization server includes this value when redirecting the user-agent back after owner has successfully proved ownership through web3 signature.  The parameter SHOULD be used for preventing cross-site request forgery attacks and should not be guessable. A GUID or hash of the user session could be used
+          required: false
+          schema:
+            type: string
+            example: 73ec3d0a-b206-4840-a493-2c20a8d893bb         
+      responses:
+        '302':
+          description: Request successful and authorize URI is in the `Location` HTTP header
+        '503':
+          description: Service temporarily not available. Please try again later
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'  
+
   /accounts/{account-address}:
     get:
       operationId: LookupERC721MediaByAccount
