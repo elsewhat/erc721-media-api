@@ -2,42 +2,42 @@ openapi: 3.0.1
 info:
   title: 'ERC721 Media API'
   description: |
-    #Introduction
-    The ERC721 Media API provides a standardized approach for allowing third party access to  media files for ERC721 NFTs if the owner gives permission. 
+    # Introduction
+    The ERC721 Media API provides a standardized approach for allowing third party access to media files for ERC721 NFTs if the owner gives permission. 
     
-    Media files may for example be rigged:  
-    1. 3D models in VRM, FBX and GLB formats to be used in open worlds such as Cryptovoxels, Sandbox, Decentraland or Somnium
+    Example of media files are:  
+    1. Rigged 3D models in VRM, FBX and GLB formats to be used in open worlds such as Cryptovoxels, Sandbox, Decentraland or Somnium
     1. 2D sprite sheets to use in 2D based worlds such as worldwideweb3
     
-    The media files in question are *not* stored on the blockchain, but are securely stored as part of the website for the ERC721 collection owner.
+    The media files in question are *not* stored on the blockchain, but are securely stored as part at the website of the ERC721 contract owner. An ERC721 contract owner can implement this API to provide third party access to the media files. 
     
     # Requesting owner permission
-    To grant access to the media files, the NFT owner must sign a message using web3 on the website for the ERC721 contract owner. This will trigger a redirect to a callback URI defined by third party application. 
+    At a high-level, a third party application would like to access media files on behalf of the NFT owner. To prove the ownership the NFT owner must sign a message using web3 at the website of the ERC721 contract owner. This will trigger a redirect to a callback URI defined by the third party application and include the necessary access token to access the media files for a limited time period.
     
-    The overall authentication flow is inspired by the [OAuth Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1).
+    The overall authentication flow is inspired by the [OAuth Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1), but is simpler (`access_token` returned in initial `callbackURI`).
     
-    The first step is the endpoint [`/authorize`](#operation/GetAuthorizeURI) which initialize the flow from a third party application. The third party application must provide a `callbackURI` and is recommended to provide a `state` parameter for preventing cross-site request forgery attacks.
+    The first step is the endpoint [`/authorize`](#operation/GetAuthorizeURI) which initialize the flow from the third party application. The third party application must provide a `callbackURI` and is recommended to provide a `state` parameter for preventing cross-site request forgery attacks.
     
-    The results of the first step is a `HTTP 302 redirect` to a URI owned by the ERC721 contract owner. This redirect includes the `callbackURI` and `state` from the third party application. 
+    The results of the first step is a `HTTP 302 redirect` to a URI at the website of the ERC721 contract owner. This redirect includes the `callbackURI` and `state` from the third party application. 
     
     By following the redirect, the NFT owner will need to sign a message using web3 to prove ownership. 
     If the authentication through web3 signature was completed successfully, the callback URL will be triggered with three parameters:  
     ```
-    account: The account address that apporved access.
-    accessToken: The token that grants access to the owner files.
+    account: The account address that approved access.
+    access-token: The token that grants access to the owner files.
     state (optional): Optional state parameter which should be compared with  in order to protect against cross-site request forgery
     ```
     
     If authentication was not successful, for example the user cancelled the request,  the callback URL will be triggered with a single parameter:  
     ```
-    errorMessage: The message describing the error that occured, or that the user declined access.
+    error_message: The message describing the error that occured, or that the user declined access.
     ```
     
     # Get available media files
-    [`/accounts/{account-address}`](#operation/LookupERC721MediaByAccount)
+    Available media files are found through [`/nfts`](#operation/GetNFTSByWallet). This endpoint may require a valid `access-token`.
     
     # Download media file
-    
+    Media files are downloaded from [`/nfts/{nft-id}/media/{media-id}`](#operation/DownloadMediaForNFT). This endpoint will always required a valid `access-token`.
     
   version: "0.1.0"
 
@@ -70,16 +70,18 @@ security:
   - apiKey: [ ]
 
 tags:
-  - name: Accounts
+  - name: NFTs
   - name: Authorize
+  - name: Media  
 
 x-tagGroups:
-  - name: Authorize
+  - name: Authentication
     tags:
       - Authorize  
-  - name: Accounts
+  - name: Content
     tags:
-      - Accounts  
+      - NFTs
+      - Media
 
 paths:
   /authorize:
@@ -123,23 +125,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'  
 
-  /accounts/{account-address}:
+  /nfts:
     get:
-      operationId: LookupERC721MediaByAccount
-      summary: Lookup ERC721 media by account for this collection
+      operationId: GetNFTSByWallet
+      summary: Get ERC721 Non-Fungible tokens with media by account for this contract
       description: |
         ### Overview
-        TBD
+        For a given wallet, get ERC721 Non-Fungible tokens and their media for this single contract. 
+        
+        The response will contain the standard ERC721 metadata, but also references to additional media files. 
       tags:
-        - Accounts
+        - NFTs
       parameters:
-        - in: path
-          name: account-address
+        - in: query
+          name: wallet
           description: The ethereum wallet address of the user
           required: true
           schema:
             type: string
             example: '0x1912365cf48b8d0cd9081958e69b7a1708249123'
+        - in: query
+          name: access-token
+          description: Access token from authentication. May not be required for some contracts
+          required: false
+          schema:
+            type: string
+            example: 'uuzGVVFwklbyDBFERTxe'
+        - in: query
+          name: per-page
+          description: Results to return pr page
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 100
+        - in: query
+          name: page
+          description: Page to fetch
+          required: false
+          schema:
+            type: integer
+            default: 1            
       responses:
         '200':
           content: 
@@ -147,12 +173,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContractTokens'
           description: Request successful
-        '404':
-          description: Account does not exist or does not own any ERC721 NFTs for this collection
-          content: 
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'                         
         default:
           description: Unexpected error
           content: 
@@ -160,6 +180,81 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'           
 
+  /nfts/{nft-id}/media/{media-id}:
+    get:
+      tags:
+      - Media
+      summary: Download media file for NFT
+      operationId: DownloadMediaForNFT
+      description: | 
+        ### Overview
+        Download a media file for an NFT. 
+        
+        The `nft-id` and `media-id` can be found using [`/nfts`](#operation/GetNFTSByWallet)
+        
+        ### Important information
+        Response `401` will occur if provided `access-token` is expired or not valid. 
+        Response `403` will occur if the `access-token` is valid, but does not have authorization to download the media.
+      parameters: 
+      - name: nft-id
+        in: path
+        description: |
+          `nft-id` from response of `/nfts`
+        required: true
+        schema:
+          type: string
+      - name: media-id
+        in: path
+        description: |
+          `media-id` from response of `/nfts`
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: access-token
+        description: Access token from authentication
+        required: true
+        schema:
+          type: string
+          example: 'uuzGVVFwklbyDBFERTxe'          
+      responses:
+        '200':
+          description: Success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: |
+            `access-token` or other required parameter not provided
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'                    
+        '401':
+          description: |
+            `access-token` expired or not valid.
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'                  
+        '403':
+          description: |
+            No access to `media-id`
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'                  
+        '404':
+          description: |
+            `nft-id` or `media-id` could not be found.
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'    
+        default:
+            $ref: '#/components/responses/DefaultResponse' 
    
 
 components:
@@ -214,14 +309,18 @@ components:
         - $ref: '#/components/schemas/Pagination'    
       type: object
       properties:
-        tokens:
+        nfts:
             type: array
             items:
-              $ref: '#/components/schemas/ContractToken'
+              $ref: '#/components/schemas/NFT'
               
-    ContractToken:
+    NFT:
         type: object
         properties:
+          nftId: 
+            type: string
+            example: '0x7Bd29408f11D2bFC23c34f18275bBf23bB716Bc7-13396'
+            description: Unique id of the NFT
           contract:
             type: string
             example: '0x7Bd29408f11D2bFC23c34f18275bBf23bB716Bc7'
@@ -231,7 +330,7 @@ components:
             example: '13396'
             description: Token id in the contract
           owner: 
-            $ref: '#/components/schemas/ContractToken'
+            $ref: '#/components/schemas/TokenOwner'
           erc721:
             $ref: '#/components/schemas/ERC721'
           media:
@@ -239,7 +338,6 @@ components:
             items:
               $ref: '#/components/schemas/Media'          
           
-    
     TokenOwner: 
         type: object
         properties:
@@ -282,6 +380,10 @@ components:
       type: object
       description: Media available for the owner of the ERC721
       properties:
+        mediaId: 
+          type: string
+          description: | 
+            Unique id of the media to be used against the endpoint `/media`
         mediaType: 
           type: string
           description: | 
@@ -293,17 +395,3 @@ components:
           type: string
           description: File ending for the media which can be used if mediaType is not defined
           example: 'gltf'
-        uri:
-          type: string
-          description: | 
-            Download link for the media
-        uriAuthenticationMethod:
-          type: string
-          description: |
-            Type of authentication for proving ownership of ERC721
-          enum: ['AccessTokenQueryParameter', 'AuthorizationBearerHTTPHeader']
-        uriExpires:
-          type: string
-          format: date-time
-          description: | 
-            Defines if the uri expires at a certain time (for example to require reauthentication)
