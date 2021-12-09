@@ -253,8 +253,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'    
-        default:
-            $ref: '#/components/responses/DefaultResponse' 
    
 
 components:
