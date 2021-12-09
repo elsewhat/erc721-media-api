@@ -54,7 +54,7 @@ info:
     url: http://www.apache.org/licenses/
 
   x-logo:
-    url: 'https://elsewhat.github.io/nft-erc721-media-api/img/logo.png'
+    url: 'https://elsewhat.github.io/erc721-media-api/img/logo.png'
     altText: Logo
   
 servers:
