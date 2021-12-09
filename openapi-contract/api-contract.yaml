@@ -40,10 +40,9 @@ info:
     Media files are downloaded from [`/nfts/{nft-id}/media/{media-id}`](#operation/DownloadMediaForNFT). This endpoint will always required a valid `access-token`.
     
     # Future improvements
-    Currently, the `access-token` is passed around as a query parameter. This can have security implications. 
+    Currently, the `access-token` is passed around as a query parameter. This can have security implications. Bearer based authentication via `Authorization` HTTP header ought to be defined as an alternative. 
     
-    Bearer based authenatication via `Authorization` HTTP header ought to be an alternative. 
-    
+    Ideally, there should be a reference from the Ethereum smart contract to this API. However, it will not be feasible to adjust existing contracts with this information. New contracts are encouraged to provide a `tokenMediaURI` function which returns the base URI of the ERC721 Media API implementation for the contract.
   version: "0.1.0"
 
   contact:
@@ -58,21 +57,13 @@ info:
     url: 'https://elsewhat.github.io/nft-erc721-media-api/img/logo.png'
     altText: Logo
   
-externalDocs:
-  description: API documentation
-  url: 'https://elsewhat.github.io/nft-erc721-media-api'
-  
 servers:
   - url: https://meebits.larvalabs.com/api/v1/
     description: |
       NFT collection #1 (contract 0x12345)
   - url: https://api.bayc.com/api/v1/
     description: |
-      NFT collection #2 (contract 0x56789)  
-
-security:
-  - bearerAuth: [ ]
-  - apiKey: [ ]
+      NFT collection #2 (contract 0x56789)
 
 tags:
   - name: NFTs
@@ -97,12 +88,14 @@ paths:
       summary: Redirect to authorize URI
       description: |
         ### Overview
-        Initiate the authorization flow where the NFT owner must sign a message using web3 on the website for the ERC721 collection owner. 
+        Initiate the authorization flow where the NFT owner must sign a message using web3 at the website of the ERC721 collection owner. 
         
         A successful signature verification will result in a `HTTP 302 redirect` to the provided `callbackURI` which should be part of third party application requiring access to the media file.
         
         ### Important information
-        Note: The response of this API call is normally a `HTTP 302 redirect` where the `Location` HTTP header contains the URI the NFT owner must visit in order to prove ownership.
+        The response of this API call is normally a `HTTP 302 redirect` where the `Location` HTTP header contains the URI the NFT owner must visit in order to prove ownership.
+        
+        Response `503` indicate the media files are temporarily unavailable (for example due to planned maintenance).
       parameters:
         - in: query
           name: callbackURI
@@ -115,14 +108,14 @@ paths:
         - in: query
           name: state
           description: |
-            An opaque value used by the client to maintain state between the request and callback.  The authorization server includes this value when redirecting the user-agent back after owner has successfully proved ownership through web3 signature.  The parameter SHOULD be used for preventing cross-site request forgery attacks and should not be guessable. A GUID or hash of the user session could be used
+            An opaque value used by the client to maintain state between the request and callback.  The authorization server includes this value when redirecting the user-agent back after owner has successfully proved ownership through web3 signature.  The parameter should be used for preventing cross-site request forgery attacks and should not be guessable. A GUID or hash of the user session can be used as value.
           required: false
           schema:
             type: string
             example: 73ec3d0a-b206-4840-a493-2c20a8d893bb         
       responses:
         '302':
-          description: Request successful and authorize URI is in the `Location` HTTP header
+          description: Request successful and authorize URI is returned in the `Location` HTTP header
         '503':
           description: Service temporarily not available. Please try again later
           content: 
@@ -140,10 +133,9 @@ paths:
       summary: Get NFTs with media for this contract and wallet
       description: |
         ### Overview
-        For a given wallet, get ERC721 Non-Fungible tokens and their media for this single contract. 
+        Get ERC721 Non-Fungible tokens and their media for this single contract and wallet.
         
-        The response will contain the standard ERC721 metadata, but also references to additional media files. 
-
+        The response will contain the standard ERC721 metadata, but also references to additional media files that can be downloaded via [`/nfts/{nft-id}/media/{media-id}`](#operation/DownloadMediaForNFT).
       parameters:
         - in: query
           name: wallet
@@ -267,10 +259,6 @@ paths:
    
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
   schemas:
     ProblemDetails:
           type: object
@@ -343,7 +331,7 @@ components:
             example: '13396'
             description: Token id in the contract
           owner: 
-            $ref: '#/components/schemas/TokenOwner'
+            $ref: '#/components/schemas/NFTOwner'
           erc721:
             $ref: '#/components/schemas/ERC721'
           media:
@@ -351,7 +339,7 @@ components:
             items:
               $ref: '#/components/schemas/Media'          
           
-    TokenOwner: 
+    NFTOwner: 
         type: object
         properties:
           address:    
