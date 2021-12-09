@@ -12,7 +12,7 @@ info:
     The media files in question are *not* stored on the blockchain, but are securely stored as part at the website of the ERC721 contract owner. An ERC721 contract owner can implement this API to provide third party access to the media files. 
     
     # Requesting owner permission
-    At a high-level, a third party application would like to access media files on behalf of the NFT owner. To prove the ownership the NFT owner must sign a message using web3 at the website of the ERC721 contract owner. This will trigger a redirect to a callback URI defined by the third party application and include the necessary access token to access the media files for a limited time period.
+    At a high-level, a third party application would like access to media files on behalf of the NFT owner. To prove the ownership, the NFT owner must sign a message using web3 at the website of the ERC721 contract owner. This will trigger a redirect to a callback URI defined by the third party application, and include the necessary `access-token` to access the media files for a limited time period.
     
     The overall authentication flow is inspired by the [OAuth Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1), but is simpler (`access_token` returned in initial `callbackURI`).
     
@@ -30,7 +30,7 @@ info:
     
     If authentication was not successful, for example the user cancelled the request,  the callback URL will be triggered with a single parameter:  
     ```
-    error_message: The message describing the error that occured, or that the user declined access.
+    error-message: The message describing the error that occured, or that the user declined access.
     ```
     
     # Get available media files
@@ -38,6 +38,11 @@ info:
     
     # Download media file
     Media files are downloaded from [`/nfts/{nft-id}/media/{media-id}`](#operation/DownloadMediaForNFT). This endpoint will always required a valid `access-token`.
+    
+    # Future improvements
+    Currently, the `access-token` is passed around as a query parameter. This can have security implications. 
+    
+    Bearer based authenatication via `Authorization` HTTP header ought to be an alternative. 
     
   version: "0.1.0"
 
@@ -86,6 +91,8 @@ x-tagGroups:
 paths:
   /authorize:
     get:
+      tags:
+        - Authorize    
       operationId: GetAuthorizeURI
       summary: Redirect to authorize URI
       description: |
@@ -96,8 +103,6 @@ paths:
         
         ### Important information
         Note: The response of this API call is normally a `HTTP 302 redirect` where the `Location` HTTP header contains the URI the NFT owner must visit in order to prove ownership.
-      tags:
-        - Authorize
       parameters:
         - in: query
           name: callbackURI
@@ -127,15 +132,18 @@ paths:
 
   /nfts:
     get:
+      tags:
+        - NFTs
+      security:
+        - bearerAuth: []            
       operationId: GetNFTSByWallet
-      summary: Get ERC721 Non-Fungible tokens with media by account for this contract
+      summary: Get NFTs with media for this contract and wallet
       description: |
         ### Overview
         For a given wallet, get ERC721 Non-Fungible tokens and their media for this single contract. 
         
         The response will contain the standard ERC721 metadata, but also references to additional media files. 
-      tags:
-        - NFTs
+
       parameters:
         - in: query
           name: wallet
@@ -184,6 +192,8 @@ paths:
     get:
       tags:
       - Media
+      security:
+        - bearerAuth: []      
       summary: Download media file for NFT
       operationId: DownloadMediaForNFT
       description: | 
@@ -194,6 +204,7 @@ paths:
         
         ### Important information
         Response `401` will occur if provided `access-token` is expired or not valid. 
+        
         Response `403` will occur if the `access-token` is valid, but does not have authorization to download the media.
       parameters: 
       - name: nft-id
@@ -256,6 +267,10 @@ paths:
    
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     ProblemDetails:
           type: object
