@@ -1,0 +1,127 @@
+openapi: 3.0.1
+info:
+  title: 'NFT ERC721 Media API'
+  description: |
+    TODO
+  version: "0.1.0"
+
+  contact:
+    name: Contact via github issues
+    url: https://github.com/elsewhat/nft-erc721-media-api
+  
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/
+
+  x-logo:
+    url: 'https://elsewhat.github.io/api-first-workbench/img/logo.png'
+    altText: Logo
+  
+externalDocs:
+  description: API documentation
+  url: 'https://elsewhat.github.io/nft-erc721-media-api'
+  
+servers:
+  - url: https://meebits.larvalabs.com/api/v1/
+    description: Production environment
+
+security:
+  - bearerAuth: [ ]
+  - apiKey: [ ]
+
+tags:
+  - name: Accounts
+
+x-tagGroups:
+  - name: Accounts
+    tags:
+      - Accounts  
+
+paths:
+  /accounts/{account-address}:
+    get:
+      operationId: LookupERC721MediaByAccount
+      summary: Lookup ERC721 media by account for this collection
+      description: |
+        ### Overview
+        TBD
+      tags:
+        - Accounts
+      parameters:
+        - in: path
+          name: account-address
+          description: The ethereum wallet address of the user
+          required: true
+          schema:
+            type: string
+            example: '0x1912365cf48b8d0cd9081958e69b7a1708249123'
+      responses:
+        '200':
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountMedia'
+          description: Request successful
+        '400':
+          description: Bad request
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Account does not exist or does not own any ERC721 NFTs for this collection
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'                         
+        default:
+          description: Unexpected error
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'           
+
+   
+
+components:
+  schemas:
+    ProblemDetails:
+          type: object
+          properties:
+            type:
+              type: string
+              description: Reference to HTTP status definition
+              example: 'https://tools.ietf.org/html/rfc7231#section-6.5.1'
+              nullable: true
+            title:
+              type: string
+              description: Description of error
+              example: 'One or more validation errors occurred.'
+              nullable: true
+            status:
+              type: integer
+              description: HTTP status code
+              example: 400
+              format: int32
+              nullable: true
+            traceId:
+              type: string
+              description: Request id to be used for support
+              example: '00-d9dc368e6caec4449a64e798dad1b5b2-7d82bdde82c9474a-00'
+            errors:
+              type: object
+              description: Detailed information about error
+              additionalProperties:
+                type: object
+                additionalProperties: false
+              nullable: true
+              readOnly: true
+          additionalProperties: false
+
+          
+    AccountMedia:
+      type: object
+      properties:  
+        address:
+          type: string
+          example: "TODO"
